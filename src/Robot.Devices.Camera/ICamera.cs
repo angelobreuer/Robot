@@ -1,10 +1,14 @@
 ﻿namespace Robot.Devices.Camera
 {
     using System;
-    using System.Threading.Channels;
+    using System.Collections.Generic;
+    using System.Threading;
+    using System.Threading.Tasks;
 
     public interface ICamera : IAsyncDisposable
     {
-        ChannelReader<IPooledBitmap> FrameReader { get; }
+        IAsyncEnumerable<IPooledBitmap> ReadAllAsync(CancellationToken cancellationToken = default);
+
+        Task<IPooledBitmap> ReadAsync(CancellationToken cancellationToken = default);
     }
 }

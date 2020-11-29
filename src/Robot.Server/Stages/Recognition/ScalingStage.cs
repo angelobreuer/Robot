@@ -4,12 +4,13 @@
     using System.Drawing;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
     using Robot.Devices.Camera;
 
     internal sealed class ScalingStage : IStage<IReadOnlyList<IPooledBitmap>, IReadOnlyList<IPooledBitmap>>
     {
         /// <inheritdoc/>
-        public ValueTask<IReadOnlyList<IPooledBitmap>> ProcessAsync(IReadOnlyList<IPooledBitmap> value, IAsyncStageProgress progress, CancellationToken cancellationToken = default)
+        public ValueTask<IReadOnlyList<IPooledBitmap>> ProcessAsync(IReadOnlyList<IPooledBitmap> value, IAsyncStageProgress progress, ILogger logger, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
