@@ -6,5 +6,6 @@
         SensorSync,
         Ping,
         Pong,
+        Status,
     }
 }

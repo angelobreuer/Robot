@@ -1,8 +1,10 @@
 #include <ServerConnection.h>
 #include <ESP8266WiFi.h>
 #include <EstablishPayload.h>
+#include <SensorSyncPayload.h>
+#include <StatusPayload.h>
 
-ServerConnection::ServerConnection(Logger *logger) : _logger(logger)
+ServerConnection::ServerConnection(Logger *logger) : _logger(logger), _last_ping_time(0), _pending_pings(0)
 {
 }
 
@@ -52,6 +54,47 @@ void ServerConnection::begin(const char *ssid, const char *passphrase, const cha
     sendPayload(0, buffer, 6);
 }
 
+void ServerConnection::ping()
+{
+    if (++_pending_pings > 5)
+    {
+        fatal("Server did not acknowledge the last 5 pings.");
+    }
+
+    sendPayload<void>(2, nullptr, 0);
+}
+
+void ServerConnection::processPayload(unsigned char op_code, unsigned char *payload_buffer, size_t length)
+{
+    if (op_code == 0x3)
+    {
+        if (--_pending_pings < 0)
+        {
+            fatal("A ping was acknowledged that was not sent.");
+        }
+
+        _latency = ((float)(micros64() - _last_ping_time)) / (float)1000;
+        _logger->writef("Received pong. Latency: %.2fms.", _latency);
+    }
+}
+
+void ServerConnection::updateStatus(Status status)
+{
+    StatusPayload payload;
+    payload.status = status;
+
+    sendPayload(4, &payload, 1);
+}
+
+void ServerConnection::updateSensor(uint8_t id, uint8_t value)
+{
+    SensorSyncPayload payload;
+    payload.id = id;
+    payload.value = value;
+
+    sendPayload(1, &payload, 2);
+}
+
 void ServerConnection::doConnect(const char *server)
 {
     _logger->writef("Connecting to server: %s...", server);
@@ -71,12 +114,6 @@ void ServerConnection::fatal(const char *message)
     {
         yield();
     }
-}
-
-template <typename T>
-void ServerConnection::sendPayload(unsigned char op_code, T *payload)
-{
-    sendPayload(op_code, payload, sizeof(T));
 }
 
 template <typename T>
@@ -111,10 +148,10 @@ bool ServerConnection::tryReadPayload()
 
     byte payload_buffer[_previous_header.length];
     _wifi_client.read(payload_buffer, _previous_header.length);
+    _logger->writef("Received payload %d (%d bytes).", _previous_header.op_code, _previous_header.length);
 
-    PayloadHeader *header = (PayloadHeader *)&payload_buffer;
-
-    processPayload(header->op_code, &payload_buffer[3], header->length);
+    processPayload(_previous_header.op_code, payload_buffer, _previous_header.length);
+    return true;
 }
 
 template <typename T>
@@ -131,17 +168,40 @@ bool ServerConnection::map(unsigned char *payload_buffer, size_t length, T *&pay
 
 void ServerConnection::run()
 {
+    if (micros64() >= _last_ping_time + 2000000UL)
+    {
+        ping();
+        _last_ping_time = micros64();
+    }
+
+    if (!_previous_header_processed)
+    {
+        if (!tryReadPayload())
+        {
+            return;
+        }
+
+        _previous_header_processed = true;
+    }
+
     while (_wifi_client.available() > 3)
     {
-        byte header_buffer[3];
-        _wifi_client.read(header_buffer, 3);
+        unsigned char header_buffer[3];
+
+        if (!_wifi_client.read(header_buffer, 3))
+        {
+            fatal("Receive error.");
+        }
 
         _previous_header.op_code = header_buffer[0];
-        _previous_header.length = *((uint16_t *)&header_buffer[1]);
+        _previous_header.length = *((uint16_t *)(((void *)header_buffer) + 1));
+        _previous_header_processed = false;
 
         if (!tryReadPayload())
         {
             return;
         }
+
+        _previous_header_processed = true;
     }
 }
