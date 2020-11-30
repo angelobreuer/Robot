@@ -1,62 +1,109 @@
 ﻿namespace Robot.Devices.Camera.DirectShow
 {
+    using System.Collections.Generic;
     using System.Drawing;
-    using System.Drawing.Imaging;
-    using System.Threading.Channels;
+    using System.Threading;
     using System.Threading.Tasks;
     using AForge.Video;
     using AForge.Video.DirectShow;
 
     public sealed class DirectShowCamera : ICamera
     {
-        private readonly Channel<IPooledBitmap> _frameChannel;
-        private readonly VideoCaptureDevice _source;
-        private bool _disposed;
+        private readonly SemaphoreSlim _semaphoreSlim;
+        private IPooledBitmap? _bitmap;
+        private TaskCompletionSource<IPooledBitmap>? _taskCompletionSource;
+        private VideoCaptureDevice? _videoCaptureDevice;
 
         public DirectShowCamera()
         {
-            var options = new BoundedChannelOptions(20)
-            {
-                SingleReader = true,
-                FullMode = BoundedChannelFullMode.DropWrite,
-            };
+            var monikerString = new FilterInfoCollection(FilterCategory.VideoInputDevice)[0].MonikerString;
 
-            _frameChannel = Channel.CreateBounded<IPooledBitmap>(options);
+            _semaphoreSlim = new SemaphoreSlim(1, 1);
 
-            var collection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
-
-            _source = new VideoCaptureDevice(collection[0].MonikerString);
-            _source.NewFrame += Source_NewFrame;
-            _source.Start();
+            _videoCaptureDevice = new VideoCaptureDevice(monikerString);
+            _videoCaptureDevice.Start();
+            _videoCaptureDevice.NewFrame += VideoCaptureDevice_NewFrame;
         }
 
         /// <inheritdoc/>
-        public ChannelReader<IPooledBitmap> FrameReader => _frameChannel.Reader;
-
-        /// <inheritdoc/>
-        public ValueTask DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
-            if (_disposed)
+            if (_videoCaptureDevice is null)
             {
-                return default;
+                return;
             }
 
-            _disposed = true;
+            _semaphoreSlim.Dispose();
 
-            _source.NewFrame -= Source_NewFrame;
-            _source.SignalToStop();
-            _source.WaitForStop();
-
-            return default;
+            await Task.Run(() =>
+            {
+                _videoCaptureDevice.SignalToStop();
+                _videoCaptureDevice.WaitForStop();
+                _videoCaptureDevice = null;
+            });
         }
 
-        private void Source_NewFrame(object sender, NewFrameEventArgs eventArgs)
+        /// <inheritdoc/>
+        public async IAsyncEnumerable<IPooledBitmap> ReadAllAsync(CancellationToken cancellationToken = default)
+        {
+            if (_videoCaptureDevice is null)
+            {
+                yield break;
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // acquire lock
+            await _semaphoreSlim.WaitAsync(cancellationToken);
+
+            // ensure the lock is released
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    _bitmap?.Dispose();
+                    var taskCompletionSource = _taskCompletionSource = new TaskCompletionSource<IPooledBitmap>();
+                    yield return await taskCompletionSource.Task;
+                }
+            }
+            finally
+            {
+                // release lock
+                _semaphoreSlim.Release();
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task<IPooledBitmap> ReadAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // acquire lock
+            await _semaphoreSlim.WaitAsync(cancellationToken);
+
+            // ensure the lock is released
+            try
+            {
+                _bitmap?.Dispose();
+                var taskCompletionSource = _taskCompletionSource = new TaskCompletionSource<IPooledBitmap>();
+                return await taskCompletionSource.Task;
+            }
+            finally
+            {
+                // release lock
+                _semaphoreSlim.Release();
+            }
+        }
+
+        private void VideoCaptureDevice_NewFrame(object sender, NewFrameEventArgs eventArgs)
         {
             using (eventArgs.Frame)
             {
-                var graphicsUnit = GraphicsUnit.Pixel;
-                var frame = eventArgs.Frame.Clone(eventArgs.Frame.GetBounds(ref graphicsUnit), PixelFormat.Format24bppRgb);
-                _frameChannel.Writer.TryWrite(new NonPooledBitmap(frame));
+                if (_taskCompletionSource is not null)
+                {
+                    _bitmap = new NonPooledBitmap((Bitmap)eventArgs.Frame.Clone());
+                    _taskCompletionSource?.TrySetResult(_bitmap);
+                }
             }
         }
     }

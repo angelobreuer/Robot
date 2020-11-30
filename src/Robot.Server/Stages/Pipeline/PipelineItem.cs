@@ -3,6 +3,7 @@
     using System;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
 
     internal sealed class PipelineItem<TItemIn, TItemOut> : IPipelineItem
     {
@@ -17,10 +18,10 @@
         public string Identifier => _stage.GetType().FullName!;
 
         /// <inheritdoc/>
-        public async Task<object?> ProcessAsync(object? value, IAsyncStageProgress progress, CancellationToken cancellationToken = default)
+        public async Task<object?> ProcessAsync(object? value, IAsyncStageProgress progress, ILogger logger, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return await _stage.ProcessAsync((TItemIn)value!, progress, cancellationToken);
+            return await _stage.ProcessAsync((TItemIn)value!, progress, logger, cancellationToken);
         }
     }
 }

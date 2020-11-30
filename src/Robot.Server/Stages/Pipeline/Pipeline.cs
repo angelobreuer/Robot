@@ -1,10 +1,12 @@
 ﻿namespace Robot.Server.Stages.Pipeline
 {
+    using System;
     using System.Collections.Immutable;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
 
-    public readonly struct Pipeline<TIn, TOut> : IStage<TIn, TOut>
+    public readonly struct Pipeline<TIn, TOut>
     {
         private readonly ImmutableArray<IPipelineItem> _items;
 
@@ -23,28 +25,34 @@
             return new Pipeline<TIn, TStageOut>(_items.Add(new PipelineItem<TOut, TStageOut>(stage)));
         }
 
-        public async ValueTask<TOut> ProcessAsync(TIn value, IAsyncStageProgress progress, CancellationToken cancellationToken = default)
+        public async ValueTask<TOut> ProcessAsync(TIn value, IAsyncStageProgress progress, ILoggerFactory loggerFactory, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             var currentValue = (object?)value;
+            var pipelineLogger = loggerFactory.CreateLogger<Pipeline<TIn, TOut>>();
+
+            pipelineLogger.LogDebug("Starting pipeline with value: {Value}.", currentValue);
 
             foreach (var item in _items)
             {
+                var startTime = DateTimeOffset.Now;
+
+                pipelineLogger.LogDebug("Started stage {Identifier} at {Time}.", item.Identifier, startTime);
+
                 using (await progress.OpenScopeAsync(item.Identifier, cancellationToken))
                 {
-                    currentValue = await item.ProcessAsync(currentValue, progress, cancellationToken);
+                    var logger = loggerFactory.CreateLogger(item.Identifier);
+                    currentValue = await item.ProcessAsync(currentValue, progress, logger, cancellationToken);
                 }
+
+                pipelineLogger.LogDebug("Completed stage {Identifier} (took {Time}ms): {Value}.",
+                    item.Identifier, (DateTimeOffset.Now - startTime).TotalMilliseconds, currentValue);
             }
 
-            return (TOut)currentValue!;
-        }
+            pipelineLogger.LogDebug("Completed pipeline with value: {Value}.", currentValue);
 
-        /// <inheritdoc/>
-        ValueTask<TOut> IStage<TIn, TOut>.ProcessAsync(TIn value, IAsyncStageProgress progress, CancellationToken cancellationToken)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            return ProcessAsync(value, progress, cancellationToken);
+            return (TOut)currentValue!;
         }
     }
 

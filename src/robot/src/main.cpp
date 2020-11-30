@@ -9,7 +9,7 @@ ServerConnection connection(&logger);
 void setup()
 {
     Serial.begin(115200);
-    connection.begin(WIFI_SSID, WIFI_PASSPHRASE);
+    connection.begin(WIFI_SSID, WIFI_PASSPHRASE, HOST_ADDRESS);
     WiFi.hostname("Robot");
 }
 

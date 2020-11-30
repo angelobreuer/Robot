@@ -6,7 +6,7 @@
     using MMALSharp.Common;
     using MMALSharp.Handlers;
 
-    public sealed class MmalCameraOutputCaptureHandler : IOutputCaptureHandler
+    internal sealed class MmalCameraOutputCaptureHandler : IOutputCaptureHandler
     {
         private readonly MmalCamera _camera;
         private int _imagesProcessed;
@@ -15,6 +15,8 @@
         {
             _camera = camera ?? throw new ArgumentNullException(nameof(camera));
         }
+
+        public IPooledBitmap Current { get; private set; }
 
         /// <inheritdoc/>
         public void Dispose()
@@ -47,7 +49,7 @@
                 format: PixelFormat.Format24bppRgb,
                 scan0: bufferPtr);
 
-            _camera.EnqueueBitmap(new NativePooledBitmap(bitmap, buffer));
+            Current = new NativePooledBitmap(bitmap, buffer);
             _imagesProcessed++;
         }
 

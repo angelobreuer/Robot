@@ -4,12 +4,13 @@
     using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
     using Robot.Devices.Camera;
 
     internal sealed class RecordingStage : IStage<ICamera, IReadOnlyList<IPooledBitmap>>
     {
         /// <inheritdoc/>
-        public async ValueTask<IReadOnlyList<IPooledBitmap>> ProcessAsync(ICamera value, IAsyncStageProgress progress, CancellationToken cancellationToken = default)
+        public async ValueTask<IReadOnlyList<IPooledBitmap>> ProcessAsync(ICamera value, IAsyncStageProgress progress, ILogger logger, CancellationToken cancellationToken = default)
         {
             var images = new List<IPooledBitmap>(capacity: 50);
 
@@ -17,7 +18,7 @@
             var stopwatch = new Stopwatch();
             stopwatch.Restart();
 
-            await using var providingEnumerator = value.FrameReader
+            await using var providingEnumerator = value
                 .ReadAllAsync(cancellationToken)
                 .GetAsyncEnumerator(cancellationToken);
 
@@ -31,7 +32,7 @@
                 var bitmap = providingEnumerator.Current;
                 images.Add(bitmap);
 
-                await Task.Delay(250, cancellationToken);
+                //await Task.Delay(250, cancellationToken);
             }
 
             return images;

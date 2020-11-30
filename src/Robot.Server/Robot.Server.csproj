@@ -1,20 +1,14 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="5.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <ProjectReference Include="..\Robot.Communication.Server\Robot.Communication.Server.csproj" />
     <ProjectReference Include="..\Robot.Devices.Camera.DirectShow\Robot.Devices.Camera.DirectShow.csproj" />
-    <ProjectReference Include="..\Robot.Devices.Camera.MMAL\Robot.Devices.Camera.MMAL.csproj" />
-    <ProjectReference Include="..\Robot.Management\Robot.Management.csproj" />
     <ProjectReference Include="..\Robot.ObjectRecognition\Robot.ObjectRecognition.csproj" />
   </ItemGroup>
 </Project>

@@ -5,6 +5,7 @@
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
     using Microsoft.ML;
     using Microsoft.ML.Data;
     using Robot.Devices.Camera;
@@ -24,7 +25,7 @@
         }
 
         /// <inheritdoc/>
-        public async ValueTask<IReadOnlyList<IReadOnlyList<YoloBoundingBox>>> ProcessAsync(IReadOnlyList<IPooledBitmap> bitmaps, IAsyncStageProgress progress, CancellationToken cancellationToken = default)
+        public async ValueTask<IReadOnlyList<IReadOnlyList<YoloBoundingBox>>> ProcessAsync(IReadOnlyList<IPooledBitmap> bitmaps, IAsyncStageProgress progress, ILogger logger, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 

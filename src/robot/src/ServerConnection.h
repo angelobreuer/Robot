@@ -11,7 +11,7 @@ class ServerConnection
 {
 public:
     ServerConnection(Logger *logger);
-    void begin(const char *ssid, const char *passphrase);
+    void begin(const char *ssid, const char *passphrase, const char *server = nullptr);
     void run();
 
 private:
@@ -24,7 +24,12 @@ private:
     void sendPayload(unsigned char op_code, T *payload);
 
     template <typename T>
+    void sendPayload(unsigned char op_code, T *payload, size_t length);
+
+    template <typename T>
     bool map(unsigned char *payload_buffer, size_t length, T *&payload);
+
+    void doConnect(const char *server);
 
     Logger *_logger;
     WiFiClient _wifi_client;
