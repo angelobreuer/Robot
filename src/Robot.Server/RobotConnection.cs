@@ -1,4 +1,4 @@
-﻿namespace Robot.Communication.Server
+﻿namespace Robot.Server
 {
     using System;
     using System.Buffers;

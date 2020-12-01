@@ -1,4 +1,4 @@
-﻿namespace Robot.Communication.Server
+﻿namespace Robot.Server
 {
     using System;
     using System.Net;
@@ -8,9 +8,9 @@
 
     public sealed class RobotServer : IDisposable
     {
-        private readonly object _syncRoot;
-        private readonly ILogger<RobotServer> _logger;
         private readonly ILogger<RobotConnection> _connectionLogger;
+        private readonly ILogger<RobotServer> _logger;
+        private readonly object _syncRoot;
         private Thread? _acceptThread;
         private Socket? _tcpSocket;
 

@@ -1,23 +1,13 @@
-namespace Robot.Server
-{
-    using System.IO;
-    using Microsoft.AspNetCore.Hosting;
-    using Microsoft.Extensions.Hosting;
-    using Microsoft.Extensions.Logging;
+using System.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Robot.Server;
 
-    public class Program
-    {
-        public static void Main(string[] args)
-        {
-            var webHost = Host.CreateDefaultBuilder(args);
+using var serviceProvider = new ServiceCollection()
+    .AddLogging(x => x.AddConsole().SetMinimumLevel(LogLevel.Trace))
+    .AddSingleton<RobotServer>()
+    .BuildServiceProvider();
 
-            webHost.ConfigureWebHostDefaults(builder =>
-            {
-                builder.UseContentRoot(Directory.GetCurrentDirectory());
-                builder.UseStartup<Startup>();
-            });
+serviceProvider.GetRequiredService<RobotServer>().Start();
 
-            webHost.Build().Run();
-        }
-    }
-}
+Thread.Sleep(-1);

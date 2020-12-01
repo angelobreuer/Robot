@@ -5,4 +5,8 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Robot.Communication.Structures\Robot.Communication.Structures.csproj" />
+  </ItemGroup>
 </Project>
