@@ -1,4 +1,4 @@
-﻿namespace Robot.Communication.Structures
+﻿namespace Robot.Server.Communication.Payloads
 {
     public unsafe struct StatusPayload
     {

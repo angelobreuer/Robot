@@ -8,11 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="BufferIO" Version="1.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="5.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Robot.Communication.Structures\Robot.Communication.Structures.csproj" />
     <ProjectReference Include="..\Robot.Devices.Camera.DirectShow\Robot.Devices.Camera.DirectShow.csproj" />
     <ProjectReference Include="..\Robot.ObjectRecognition\Robot.ObjectRecognition.csproj" />
   </ItemGroup>

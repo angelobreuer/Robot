@@ -1,4 +1,4 @@
-﻿namespace Robot.Server
+﻿namespace Robot.Server.Communication
 {
     using System;
     using System.Net;

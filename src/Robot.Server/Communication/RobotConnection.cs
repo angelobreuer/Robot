@@ -1,4 +1,4 @@
-﻿namespace Robot.Server
+﻿namespace Robot.Server.Communication
 {
     using System;
     using System.Buffers;
@@ -8,7 +8,7 @@
     using System.Threading.Tasks;
     using BufferIO.Util;
     using Microsoft.Extensions.Logging;
-    using Robot.Communication.Structures;
+    using Robot.Server.Communication.Payloads;
 
     public class RobotConnection : IDisposable
     {
