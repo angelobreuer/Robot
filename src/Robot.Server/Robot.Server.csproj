@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Robot.Devices.Camera.DirectShow\Robot.Devices.Camera.DirectShow.csproj" />
+    <ProjectReference Include="..\Robot.Devices.Camera.Static\Robot.Devices.Camera.Static.csproj" />
     <ProjectReference Include="..\Robot.ObjectRecognition\Robot.ObjectRecognition.csproj" />
   </ItemGroup>
 </Project>
