@@ -46,11 +46,11 @@
             return y2;
         }
 
-        public void AddCandidate(RgbColor color, RingSequence ringSequence, int relativeOffset, Rectangle bounds)
+        public void AddCandidate(RingSequence ringSequence, int relativeOffset, Rectangle bounds)
         {
             var index = GetStepIndex(relativeOffset);
             var stepOffset = (index * _stepSize) - relativeOffset;
-            var candidate = new SequenceCandidate(color, ringSequence, stepOffset, bounds);
+            var candidate = new SequenceCandidate(ringSequence, stepOffset, bounds);
             _candidates[index].Add(candidate);
         }
 
@@ -67,11 +67,43 @@
 
             _timeOffset = frameDelay;
 
-            foreach (var tile in tiles)
+            foreach (var sequence in tiles.GroupBy(CreateGroupKey).Where(x => x.Key is not null))
             {
-                var averagedColor = tile.Average();
-                var sequence = _sequences.OrderBy(x => GetDistance(x.Color, averagedColor)).First();
-                AddCandidate(averagedColor, sequence, relativeDelay, tile.OriginalBounds);
+                var point1 = new Point(int.MaxValue, int.MaxValue);
+                var point2 = new Point(int.MinValue, int.MinValue);
+
+                foreach (var tile in sequence)
+                {
+                    var bounds = tile.OriginalBounds;
+
+                    if (bounds.Left < point1.X)
+                    {
+                        point1.X = bounds.Left;
+                    }
+
+                    if (bounds.Top < point1.Y)
+                    {
+                        point1.Y = bounds.Top;
+                    }
+
+                    if (bounds.Right > point2.X)
+                    {
+                        point2.X = bounds.Right;
+                    }
+
+                    if (bounds.Bottom > point2.Y)
+                    {
+                        point2.Y = bounds.Bottom;
+                    }
+                }
+
+                var rectangle = new Rectangle(
+                    x: point1.X,
+                    y: point1.Y,
+                    width: point2.X - point1.X,
+                    height: point2.Y - point1.Y);
+
+                AddCandidate(sequence.Key!, relativeDelay, rectangle);
             }
 
             return true;
@@ -84,28 +116,27 @@
             return (int)MathF.Floor(stepOffset / (float)_stepSize);
         }
 
-        private static float GetDistance(RgbColor color1, RgbColor color2)
+        private RingSequence? CreateGroupKey(ImageTile tile)
         {
-            var dr = MathF.Sqrt(MathF.Pow(color1.R, 2) + MathF.Pow(color2.R, 2));
-            var dg = MathF.Sqrt(MathF.Pow(color1.G, 2) + MathF.Pow(color2.G, 2));
-            var db = MathF.Sqrt(MathF.Pow(color1.B, 2) + MathF.Pow(color2.B, 2));
+            var averagedColor = tile.Average();
 
-            return (dr + dg + db) / 3F;
+            return _sequences
+                .Select(x => (Item: x, Distance: RgbComparer.CompareByAmplitude(x.Color, averagedColor)))
+                .Where(x => x.Distance < 0.2)
+                .OrderBy(x => x.Distance)
+                .FirstOrDefault().Item;
         }
 
         public readonly struct SequenceCandidate
         {
-            public SequenceCandidate(RgbColor color, RingSequence sequence, int relativeOffset, Rectangle bounds)
+            public SequenceCandidate(RingSequence sequence, int relativeOffset, Rectangle bounds)
             {
-                Color = color;
                 Sequence = sequence ?? throw new ArgumentNullException(nameof(sequence));
                 RelativeOffset = relativeOffset;
                 Bounds = bounds;
             }
 
             public Rectangle Bounds { get; }
-
-            public RgbColor Color { get; }
 
             public int RelativeOffset { get; }
 

@@ -2,11 +2,10 @@
 {
     using System;
     using System.Collections.Immutable;
-    using System.Numerics;
 
     public sealed class MotionDetector
     {
-        private Vector3[]? _lastFrame;
+        private RgbColor[]? _lastFrame;
 
         public ImmutableArray<ImageTile> DetectChanges(ImageGrid grid)
         {
@@ -15,11 +14,11 @@
 
             if (_lastFrame is null)
             {
-                _lastFrame = GC.AllocateUninitializedArray<Vector3>(grid.Tiles);
+                _lastFrame = GC.AllocateUninitializedArray<RgbColor>(grid.Tiles);
 
                 while (enumerator.MoveNext())
                 {
-                    _lastFrame[index++] = enumerator.Current.Sum();
+                    _lastFrame[index++] = enumerator.Current.Average();
                 }
 
                 return ImmutableArray<ImageTile>.Empty;
@@ -35,11 +34,11 @@
             while (enumerator.MoveNext())
             {
                 var previousColor = _lastFrame[index];
-                var currentColor = enumerator.Current.Sum();
+                var currentColor = enumerator.Current.Average();
 
                 _lastFrame[index++] = currentColor;
 
-                if (Vector3.Distance(previousColor * Transform, currentColor * Transform) > 30000)
+                if (RgbComparer.Compare(previousColor, currentColor) > 0.4)
                 {
                     builder.Add(enumerator.Current);
                 }
@@ -47,7 +46,5 @@
 
             return builder.ToImmutable();
         }
-
-        private static readonly Vector3 Transform = new(.3F, 1F, 1.7F);
     }
 }
