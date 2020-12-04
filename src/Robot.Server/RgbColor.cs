@@ -1,5 +1,6 @@
 ﻿namespace Robot.Server
 {
+    using System;
     using System.Runtime.InteropServices;
 
     [StructLayout(LayoutKind.Explicit, Size = 4)]
@@ -19,6 +20,14 @@
             R = r;
             G = g;
             B = b;
+        }
+
+        public float Intensity
+        {
+            get
+            {
+                return (int)MathF.Round((.299F * R) + (.587F * G) + (.114F * B));
+            }
         }
 
         /// <inheritdoc/>
